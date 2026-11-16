@@ -29,7 +29,7 @@ npm ci
 npm run dev
 ```
 
-프런트엔드: http://localhost:5173, API 문서: http://localhost:8000/docs. Vite 개발 프록시가 `/api` 요청을 로컬 백엔드로 전달합니다. 개발/격리 스테이징 환경에서만 `DEMO_ACCOUNTS_ENABLED=true`로 일반 사용자/관리자 테스트 로그인을 활성화할 수 있습니다. 운영 DB에서는 사용하지 마세요.
+프런트엔드: http://localhost:5173, API 문서: http://localhost:8000/docs. Vite 개발 프록시가 `/api` 요청을 로컬 백엔드로 전달합니다. `DEMO_ACCOUNTS_ENABLED=true`이면 로그인 화면에 일반 사용자/관리자 테스트 계정 버튼이 표시됩니다(운영 환경 포함, 기본값은 꺼짐). 테스트 계정은 누구나 함께 쓰는 공용 계정입니다. 테스트 관리자는 회원 관리 화면을 체험할 수 있지만 실제 회원의 이름·이메일은 가려서 보고, 권한은 테스트 계정끼리만 바꿀 수 있습니다. 실제 회원 관리는 `ADMIN_EMAIL`로 만든 관리자 계정으로 합니다.
 
 식품 데이터를 수집하려면 공공데이터포털의 **식품의약품안전처_식품영양성분DB정보** 활용신청 후 발급된 키를 `.env`의 `MFDS_API_KEY`에 넣고 저장소 루트에서 다음을 실행합니다. 현재 수집기는 `FoodNtrCpntDbInfo03/getFoodNtrCpntDbInq03`을 사용합니다. 식품안전나라의 예전 `I2790` 호출 주소에 새 키를 넣어도 동작하지 않습니다.
 

@@ -197,3 +197,48 @@ def test_invalid_admin_password_skips_bootstrap_without_crashing(monkeypatch):
         with session() as db:
             assert db.query(User).filter_by(email="admin@example.com", role="admin").count() == admins
     engine.dispose()
+
+
+def test_demo_accounts_work_in_production_with_limited_admin_powers(client, monkeypatch):
+    web, session = client
+    monkeypatch.setattr(main, "env", "production")
+    monkeypatch.setattr(main, "demo_enabled", False)
+    assert web.get("/api/auth/demo-status").json() == {"enabled": False}
+    assert web.post("/api/auth/demo-login", json={"role": "admin"}).status_code == 404
+
+    monkeypatch.setattr(main, "demo_enabled", True)
+    assert web.get("/api/auth/demo-status").json() == {"enabled": True}
+    real = register(web, "realperson@example.com")
+    with session() as db:
+        db.query(User).filter_by(email="realperson@example.com").one().role = "admin"
+        db.commit()
+    demo_user = web.post("/api/auth/demo-login", json={"role": "user"}).json()
+    demo_admin_login = web.post("/api/auth/demo-login", json={"role": "admin"}).json()
+    assert demo_user["user"]["role"] == "user" and demo_user["user"]["is_demo"] is True
+    assert demo_admin_login["user"]["role"] == "admin"
+    demo_admin = {"Authorization": f'Bearer {demo_admin_login["access_token"]}'}
+
+    listed = {u["id"]: u for u in web.get("/api/admin/users", headers=demo_admin).json()}
+    person = next(u for u in listed.values() if not u["is_demo"])
+    assert person["email"] == "re********@example.com" and person["name"] == "테**"
+    assert web.patch(f'/api/admin/users/{person["id"]}/role', headers=demo_admin, json={"role": "user"}).status_code == 403
+    changed = web.patch(f'/api/admin/users/{demo_user["user"]["id"]}/role', headers=demo_admin, json={"role": "admin"})
+    assert changed.status_code == 200 and changed.json()["role"] == "admin"
+
+    # Real admins still see real data, and the demo admin never counts as the last real admin.
+    assert any(u["email"] == "realperson@example.com" for u in web.get("/api/admin/users", headers=real).json())
+    real_id = next(u["id"] for u in listed.values() if not u["is_demo"])
+    other = register(web, "second@example.com")
+    with session() as db:
+        db.query(User).filter_by(email="second@example.com").one().role = "admin"
+        db.commit()
+    assert web.patch(f"/api/admin/users/{real_id}/role", headers=other, json={"role": "user"}).status_code == 200
+    with session() as db:
+        last_id = db.query(User).filter_by(email="second@example.com").one().id
+    assert web.patch(f"/api/admin/users/{last_id}/role", headers=demo_admin, json={"role": "user"}).status_code == 403
+
+    # Demo admin stays an admin even if it was demoted.
+    with session() as db:
+        db.query(User).filter_by(email="demo-admin@carepick.local").one().role = "user"
+        db.commit()
+    assert web.post("/api/auth/demo-login", json={"role": "admin"}).json()["user"]["role"] == "admin"

@@ -165,8 +165,10 @@ function Login({ onLogin }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [providers, setProviders] = useState({})
+  const [demoEnabled, setDemoEnabled] = useState(false)
   useEffect(() => { setMode(new URLSearchParams(location.search).get('mode') === 'register' ? 'register' : 'login') }, [location.search])
   useEffect(() => { api('/auth/oauth/providers').then(setProviders).catch(() => {}) }, [])
+  useEffect(() => { api('/auth/demo-status').then((d) => setDemoEnabled(d.enabled)).catch(() => {}) }, [])
   useEffect(() => {
     const code = new URLSearchParams(location.search).get('code')
     const oauthError = new URLSearchParams(location.search).get('error')
@@ -218,8 +220,8 @@ function Login({ onLogin }) {
         <button type="button" disabled={!providers.naver} title={providers.naver ? '네이버로 로그인' : '네이버 로그인 설정 대기 중'} aria-label="네이버로 로그인" className="social-button naver" onClick={() => window.location.assign(`${apiBase}/api/auth/oauth/naver/start`)}>N</button>
         <button type="button" disabled={!providers.kakao} title={providers.kakao ? '카카오로 로그인' : '카카오 로그인 설정 대기 중'} aria-label="카카오로 로그인" className="social-button kakao" onClick={() => window.location.assign(`${apiBase}/api/auth/oauth/kakao/start`)}>K</button>
       </div>
-      <div className="demo-box"><div><strong>먼저 둘러보고 싶으신가요?</strong><p>테스트 계정으로 바로 체험해 보세요.</p></div><div className="demo-actions"><button disabled={busy} onClick={() => demo('user')}><Icon icon={faUser} /> 일반 사용자</button><button disabled={busy} onClick={() => demo('admin')}><Icon icon={faShieldHeart} /> 관리자</button></div></div>
-      <p className="auth-terms">테스트 로그인은 개발/스테이징에서 활성화된 경우에만 사용할 수 있습니다.</p>
+      {demoEnabled && <><div className="demo-box"><div><strong>먼저 둘러보고 싶으신가요?</strong><p>테스트 계정으로 바로 체험해 보세요.</p></div><div className="demo-actions"><button disabled={busy} onClick={() => demo('user')}><Icon icon={faUser} /> 일반 사용자</button><button disabled={busy} onClick={() => demo('admin')}><Icon icon={faShieldHeart} /> 관리자</button></div></div>
+      <p className="auth-terms">테스트 계정은 여러 사람이 함께 쓰는 공용 계정입니다. 실제 개인 정보는 입력하지 마세요.</p></>}
     </div></div>
   </div>
 }
@@ -364,9 +366,9 @@ function Admin({ token, user }) {
     } catch (e) { setError(e.message) } finally { setBusyId(null) }
   }
   return <div className="app-page"><div className="container"><PageHeading tag="ADMIN CONSOLE" title="회원 관리" description="회원 목록을 확인하고 서비스 권한을 안전하게 관리하세요." icon={faUsers} />
-    <div className="admin-summary"><Icon icon={faShieldHeart} /><div><strong>관리자 전용 공간</strong><p>회원 권한 변경은 즉시 적용됩니다. 본인 권한은 변경할 수 없습니다.</p></div><span>전체 회원 {users.length}명</span></div>
+    <div className="admin-summary"><Icon icon={faShieldHeart} /><div><strong>{user.is_demo ? '테스트 관리자 체험 모드' : '관리자 전용 공간'}</strong><p>{user.is_demo ? '실제 회원 정보는 가려서 표시되며, 권한은 테스트 계정끼리만 변경할 수 있습니다.' : '회원 권한 변경은 즉시 적용됩니다. 본인 권한은 변경할 수 없습니다.'}</p></div><span>전체 회원 {users.length}명</span></div>
     {error && <div className="form-error" role="alert">{error}</div>}
-    <div className="panel admin-panel"><div className="panel-heading"><div><span className="eyebrow">MEMBERS</span><h3>회원 목록</h3></div></div><div className="table-scroll"><table><thead><tr><th>회원</th><th>이메일</th><th>가입 방식</th><th>권한</th></tr></thead><tbody>{users.map((item) => <tr key={item.id}><td><div className="table-person"><span><Icon icon={faUser} /></span><strong>{item.name}{item.id === user.id ? ' (나)' : ''}</strong></div></td><td>{item.email}</td><td>{item.provider || '이메일'}</td><td><select aria-label={`${item.name} 권한`} disabled={item.id === user.id || busyId === item.id} value={item.role} onChange={(e) => changeRole(item.id, e.target.value)}><option value="user">일반 사용자</option><option value="admin">관리자</option></select></td></tr>)}</tbody></table></div>{!users.length && <EmptyState text="표시할 회원이 없습니다." />}</div>
+    <div className="panel admin-panel"><div className="panel-heading"><div><span className="eyebrow">MEMBERS</span><h3>회원 목록</h3></div></div><div className="table-scroll"><table><thead><tr><th>회원</th><th>이메일</th><th>가입 방식</th><th>권한</th></tr></thead><tbody>{users.map((item) => <tr key={item.id}><td><div className="table-person"><span><Icon icon={faUser} /></span><strong>{item.name}{item.id === user.id ? ' (나)' : ''}</strong></div></td><td>{item.email}</td><td>{item.provider || '이메일'}</td><td><select aria-label={`${item.name} 권한`} disabled={item.id === user.id || busyId === item.id || (user.is_demo && !item.is_demo)} value={item.role} onChange={(e) => changeRole(item.id, e.target.value)}><option value="user">일반 사용자</option><option value="admin">관리자</option></select></td></tr>)}</tbody></table></div>{!users.length && <EmptyState text="표시할 회원이 없습니다." />}</div>
   </div></div>
 }
 

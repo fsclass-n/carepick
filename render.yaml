@@ -25,4 +25,4 @@ services:
       - key: BACKEND_URL
         value: https://carepick-api.onrender.com
       - key: DEMO_ACCOUNTS_ENABLED
-        value: "false"
+        value: "true"

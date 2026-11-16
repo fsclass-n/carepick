@@ -24,7 +24,9 @@ from .db import Base, SessionLocal, engine, get_db
 from .models import Food, Meal, OAuthTicket, User, utc_now
 
 env = os.getenv("APP_ENV", "development")
-demo_enabled = os.getenv("DEMO_ACCOUNTS_ENABLED", "false").lower() == "true" and env != "production"
+demo_enabled = os.getenv("DEMO_ACCOUNTS_ENABLED", "false").lower() == "true"
+# Shared one-click accounts; ".local" is rejected by sign-up validation, so these cannot be claimed.
+demo_emails = {"user": "demo-user@carepick.local", "admin": "demo-admin@carepick.local"}
 secret_key = os.getenv("JWT_SECRET") or secrets.token_urlsafe(48)
 if env == "production" and not os.getenv("JWT_SECRET"):
     raise RuntimeError("JWT_SECRET is required in production")
@@ -114,8 +116,23 @@ def valid_password(value: str) -> bool:
     )
 
 
+def is_demo(user: User) -> bool:
+    return user.email in demo_emails.values() and user.password_hash is None and user.provider is None
+
+
 def public_user(user: User):
-    return {"id": user.id, "email": user.email, "name": user.name, "role": user.role, "provider": user.provider}
+    return {"id": user.id, "email": user.email, "name": user.name, "role": user.role, "provider": user.provider,
+            "is_demo": is_demo(user)}
+
+
+def mask(text: str, keep: int) -> str:
+    return text[:keep] + "*" * max(len(text) - keep, 1)
+
+
+def masked_user(user: User):
+    # Shared demo admins may see the console layout but not real members' personal data.
+    local, _, domain = user.email.partition("@")
+    return {**public_user(user), "email": f"{mask(local, 2)}@{domain}", "name": mask(user.name, 1)}
 
 
 def issue_token(user: User):
@@ -188,19 +205,28 @@ def me(user: User = Depends(current_user)):
     return public_user(user)
 
 
+@app.get("/api/auth/demo-status")
+def demo_status():
+    return {"enabled": demo_enabled}
+
+
 @app.post("/api/auth/demo-login")
 def demo_login(payload: DemoLogin, db: Session = Depends(get_db)):
     if not demo_enabled:
         raise HTTPException(status_code=404, detail="테스트 계정은 이 환경에서 사용할 수 없습니다.")
     if payload.role not in ("user", "admin"):
         raise HTTPException(status_code=422, detail="유효하지 않은 계정 유형입니다.")
-    email = f"demo-{payload.role}@carepick.local"
+    email = demo_emails[payload.role]
     user = db.scalar(select(User).where(User.email == email))
+    if user is not None and not is_demo(user):
+        raise HTTPException(status_code=409, detail="테스트 계정을 사용할 수 없습니다.")
     if user is None:
         user = User(email=email, name="테스트 관리자" if payload.role == "admin" else "테스트 사용자", role=payload.role)
         db.add(user)
-        db.commit()
-        db.refresh(user)
+    elif payload.role == "admin":
+        user.role = "admin"  # Keep the demo admin usable even if someone demoted it.
+    db.commit()
+    db.refresh(user)
     return issue_token(user)
 
 
@@ -279,8 +305,11 @@ def search_foods(q: str = Query(min_length=2, max_length=80), db: Session = Depe
 
 
 @app.get("/api/admin/users")
-def list_users(_: User = Depends(admin_user), db: Session = Depends(get_db)):
-    return [public_user(u) for u in db.scalars(select(User).order_by(User.id.desc()).limit(500)).all()]
+def list_users(admin: User = Depends(admin_user), db: Session = Depends(get_db)):
+    users = db.scalars(select(User).order_by(User.id.desc()).limit(500)).all()
+    if is_demo(admin):
+        return [public_user(u) if is_demo(u) else masked_user(u) for u in users]
+    return [public_user(u) for u in users]
 
 
 @app.patch("/api/admin/users/{user_id}/role")
@@ -292,7 +321,10 @@ def set_role(user_id: int, payload: RoleChange, admin: User = Depends(admin_user
         raise HTTPException(status_code=404, detail="회원을 찾을 수 없습니다.")
     if target.id == admin.id:
         raise HTTPException(status_code=400, detail="본인의 권한은 변경할 수 없습니다.")
-    if target.role == "admin" and payload.role == "user" and db.scalar(select(func.count()).select_from(User).where(User.role == "admin")) <= 1:
+    if is_demo(admin) and not is_demo(target):
+        raise HTTPException(status_code=403, detail="테스트 관리자는 테스트 계정의 권한만 변경할 수 있습니다.")
+    real_admins = select(func.count()).select_from(User).where(User.role == "admin", User.email.not_in(demo_emails.values()))
+    if target.role == "admin" and payload.role == "user" and not is_demo(target) and db.scalar(real_admins) <= 1:
         raise HTTPException(status_code=400, detail="마지막 관리자의 권한은 변경할 수 없습니다.")
     target.role = payload.role
     db.commit()
