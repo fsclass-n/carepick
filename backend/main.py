@@ -53,7 +53,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="carepick API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url, "http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=list({frontend_url, "https://carepick.netlify.app", "http://localhost:5173", "http://127.0.0.1:5173"}),
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )

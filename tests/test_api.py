@@ -57,6 +57,17 @@ def test_auth_policy_and_private_meals(client):
     assert web.get("/api/meals", headers=first).json() == []
 
 
+def test_netlify_origin_can_call_api(client):
+    web, _ = client
+    response = web.options("/api/meals", headers={
+        "Origin": "https://carepick.netlify.app",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "authorization,content-type",
+    })
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://carepick.netlify.app"
+
+
 def test_admin_role_change_is_enforced_server_side(client):
     web, session = client
     first = register(web, "admin@example.com")
