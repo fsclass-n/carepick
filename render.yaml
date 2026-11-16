@@ -23,6 +23,6 @@ services:
       - key: FRONTEND_URL
         value: https://carepick.netlify.app
       - key: BACKEND_URL
-        value: https://carepick.onrender.com
+        value: https://carepick-api.onrender.com
       - key: DEMO_ACCOUNTS_ENABLED
         value: "false"

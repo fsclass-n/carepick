@@ -1,10 +1,8 @@
 import hashlib
-import json
 import os
 import re
 import sys
 
-import boto3
 import requests
 from sqlalchemy import select
 
@@ -53,8 +51,6 @@ def sync():
         raise ValueError("SYNC_MAX_PAGES must be positive")
     Base.metadata.create_all(engine)
     saved = 0
-    bucket = os.getenv("S3_BUCKET")
-    s3 = boto3.client("s3", region_name=os.getenv("AWS_REGION") or "ap-northeast-2") if bucket else None
     for page in range(max_pages):
         start, end = page * 1000 + 1, (page + 1) * 1000
         url = f"https://openapi.foodsafetykorea.go.kr/api/{key}/I2790/json/{start}/{end}"
@@ -67,13 +63,6 @@ def sync():
         if status != "INFO-000":
             raise RuntimeError(f"MFDS API error: {status or 'missing result'}")
         rows = result.get("row", [])
-        if s3:
-            s3.put_object(
-                Bucket=bucket,
-                Key=f"mfds/I2790/page-{page + 1:04d}.json",
-                Body=json.dumps(result, ensure_ascii=False).encode("utf-8"),
-                ContentType="application/json",
-            )
         with SessionLocal() as db:
             for row in rows:
                 data = normalize(row)
