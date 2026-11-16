@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 import re
 import secrets
@@ -32,6 +33,7 @@ frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
 backend_url = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
 password_hasher = PasswordHasher()
 bearer = HTTPBearer(auto_error=False)
+logger = logging.getLogger("carepick")
 
 
 @asynccontextmanager
@@ -39,9 +41,10 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(engine)
     admin_email = os.getenv("ADMIN_EMAIL")
     admin_password = os.getenv("ADMIN_PASSWORD")
-    if admin_email and admin_password:
-        if not valid_password(admin_password):
-            raise RuntimeError("ADMIN_PASSWORD does not meet the password policy")
+    if admin_email and admin_password and not valid_password(admin_password):
+        # Optional bootstrap: a bad value must not take the whole API down.
+        logger.warning("ADMIN_PASSWORD does not meet the password policy; skipping initial admin creation")
+    elif admin_email and admin_password:
         with SessionLocal() as db:
             email = admin_email.strip().lower()
             if not db.scalar(select(User).where(User.email == email)):

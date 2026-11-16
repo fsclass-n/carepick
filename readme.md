@@ -44,7 +44,7 @@ AWS S3는 사용하지 않습니다. 동기화 결과는 TiDB에 저장됩니다
 ## 배포
 
 - Netlify: 저장소 루트의 `netlify.toml`을 인식하도록 Git 저장소를 연결합니다. 공개 빌드 변수 `VITE_API_URL=https://carepick-api.onrender.com`이 기본으로 설정되며 대시보드에 다른 값이 있다면 같은 주소로 맞춰야 합니다. `frontend/`나 `netlify.toml` 변경에만 재빌드합니다.
-- Render: `render.yaml` Blueprint 또는 Docker Web Service를 사용합니다. 서비스 이름은 `carepick-api`이며 `BACKEND_URL`은 실제 Render 서비스 주소와 일치해야 합니다. `DATABASE_URL`과 OAuth/관리자 환경 변수는 Render 대시보드에 등록합니다. 백엔드 관련 파일 변경 시에만 자동 빌드합니다.
+- Render: `render.yaml` Blueprint 또는 Docker Web Service를 사용합니다. 서비스 이름은 `carepick-api`이며 `BACKEND_URL`은 실제 Render 서비스 주소와 일치해야 합니다. `DATABASE_URL`과 OAuth/관리자 환경 변수는 Render 대시보드에 등록합니다. `ADMIN_EMAIL`/`ADMIN_PASSWORD`는 선택 항목이며, 비밀번호가 규칙(영문 대·소문자, 숫자, 특수문자 포함 8자 이상)에 맞지 않으면 서버는 정상 시작하되 초기 관리자 생성만 건너뛰고 경고 로그를 남깁니다. 백엔드 관련 파일 변경 시에만 자동 빌드합니다.
 - TiDB: `mysql+pymysql://...` 형식으로 접속하고 서버 인증서 검증을 적용합니다. 비공개 CA를 사용하는 경우 컨테이너에 파일을 제공한 뒤 `TIDB_CA_PATH`를 지정합니다.
 - OAuth: 제공자 콘솔에 `https://carepick-api.onrender.com/api/auth/oauth/{google|naver|kakao}/callback`을 각각 등록하고 ID/Secret을 Render에 넣습니다. 설정하지 않은 제공자는 503을 반환합니다. 기존 이메일 계정과 소셜 계정은 자동 연결하지 않습니다.
 - 공공데이터 동기화: `.github/workflows/sync-foods.yml`은 매주 실행합니다. GitHub Actions secrets `DATABASE_URL`, `MFDS_API_KEY`가 필요하며 `SYNC_MAX_PAGES`는 선택적인 저장소 변수입니다.

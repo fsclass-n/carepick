@@ -182,3 +182,18 @@ def test_portal_sync_upserts_across_pages_without_duplicates(monkeypatch):
         assert db.query(Food).count() == 2
         assert db.query(Food).filter_by(source_id="A1").one().calories == 120
     engine.dispose()
+
+
+def test_invalid_admin_password_skips_bootstrap_without_crashing(monkeypatch):
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    session = sessionmaker(bind=engine, expire_on_commit=False)
+    monkeypatch.setattr(main, "engine", engine)
+    monkeypatch.setattr(main, "SessionLocal", session)
+    monkeypatch.setenv("ADMIN_EMAIL", "Admin@Example.com")
+    for password, admins in (("weakpass", 0), ("ValidPass1!", 1)):
+        monkeypatch.setenv("ADMIN_PASSWORD", password)
+        with TestClient(app) as web:
+            assert web.get("/api/health").status_code == 200
+        with session() as db:
+            assert db.query(User).filter_by(email="admin@example.com", role="admin").count() == admins
+    engine.dispose()
