@@ -1,13 +1,18 @@
 import hashlib
+import math
 import os
 import re
 import sys
+from urllib.parse import unquote
 
 import requests
 from sqlalchemy import select
 
 from backend.db import Base, SessionLocal, engine
 from backend.models import Food
+
+API_URL = "https://apis.data.go.kr/1471000/FoodNtrCpntDbInfo03/getFoodNtrCpntDbInq03"
+PAGE_SIZE = 500
 
 
 def grams(value):
@@ -18,13 +23,14 @@ def grams(value):
 
 def nutrient(value):
     try:
-        return float(str(value).replace(",", "").strip())
+        number = float(str(value).replace(",", "").strip())
+        return number if math.isfinite(number) else None
     except (TypeError, ValueError):
         return None
 
 
 def normalize(row):
-    """The MFDS I2790 nutrients are per serving; store values per 100g."""
+    """Convert MFDS serving-based nutrients to amounts per 100g."""
     size = grams(row.get("SERVING_SIZE"))
     name = (row.get("DESC_KOR") or row.get("FOOD_NM_KR") or "").strip()
     keys = ("NUTR_CONT1", "NUTR_CONT3", "NUTR_CONT2", "NUTR_CONT4") if "NUTR_CONT1" in row else (
@@ -42,6 +48,29 @@ def normalize(row):
     }}
 
 
+def fetch_page(key, page):
+    # The portal provides both raw and URL-encoded keys; requests encodes the query once.
+    response = requests.get(
+        API_URL,
+        params={"serviceKey": unquote(key), "pageNo": page, "numOfRows": PAGE_SIZE, "type": "json"},
+        timeout=30,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, dict) or not isinstance(payload.get("header"), dict):
+        raise ValueError("Unexpected public data response")
+    code = str(payload["header"].get("resultCode", ""))
+    if code != "00":
+        raise RuntimeError(f"MFDS public data API error code: {code}")
+    body = payload.get("body")
+    if not isinstance(body, dict):
+        raise ValueError("Missing public data response body")
+    rows = body.get("items", [])
+    if not isinstance(rows, list) or not isinstance(body.get("totalCount"), (str, int)):
+        raise ValueError("Unexpected public data response items")
+    return rows, int(body["totalCount"])
+
+
 def sync():
     key = os.getenv("MFDS_API_KEY")
     if not key:
@@ -51,34 +80,38 @@ def sync():
         raise ValueError("SYNC_MAX_PAGES must be positive")
     Base.metadata.create_all(engine)
     saved = 0
-    for page in range(max_pages):
-        start, end = page * 1000 + 1, (page + 1) * 1000
-        url = f"https://openapi.foodsafetykorea.go.kr/api/{key}/I2790/json/{start}/{end}"
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-        result = response.json().get("I2790", {})
-        status = result.get("RESULT", {}).get("CODE")
-        if status == "INFO-200":
+    total = 0
+    for page in range(1, max_pages + 1):
+        rows, total = fetch_page(key, page)
+        if not rows:
+            if total:
+                raise RuntimeError("Public data response contains no items before the last page")
             break
-        if status != "INFO-000":
-            raise RuntimeError(f"MFDS API error: {status or 'missing result'}")
-        rows = result.get("row", [])
+        foods = {}
+        for row in rows:
+            data = normalize(row)
+            if data is not None:
+                foods[data["source_id"]] = data
         with SessionLocal() as db:
-            for row in rows:
-                data = normalize(row)
-                if data is None:
-                    continue
-                food = db.scalar(select(Food).where(Food.source_id == data["source_id"]))
-                if food:
+            existing = {
+                food.source_id: food
+                for food in db.scalars(select(Food).where(Food.source_id.in_(foods))).all()
+            } if foods else {}
+            for source_id, data in foods.items():
+                if source_id in existing:
                     for field, value in data.items():
-                        setattr(food, field, value)
+                        setattr(existing[source_id], field, value)
                 else:
                     db.add(Food(**data))
-                saved += 1
             db.commit()
-        print(f"Page {page + 1}: {len(rows)} rows, {saved} valid rows saved")
-        if len(rows) < 1000:
+        saved += len(foods)
+        print(f"Page {page}: {len(rows)} rows, {saved} valid rows saved")
+        if page * PAGE_SIZE >= total:
             break
+        if len(rows) < PAGE_SIZE:
+            raise RuntimeError("Unexpected short page from public data API")
+    if total and not saved:
+        raise RuntimeError("No usable gram-based nutrition rows were found")
     return saved
 
 

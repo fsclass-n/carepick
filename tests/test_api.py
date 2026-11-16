@@ -10,7 +10,7 @@ from sqlalchemy.pool import StaticPool
 from backend.db import Base, get_db
 from backend import main
 from backend.main import app
-from backend.models import OAuthTicket, User, utc_now
+from backend.models import Food, OAuthTicket, User, utc_now
 
 
 @pytest.fixture
@@ -19,6 +19,8 @@ def client(monkeypatch):
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine, expire_on_commit=False)
     monkeypatch.setattr(main, "engine", engine)
+    monkeypatch.delenv("ADMIN_EMAIL", raising=False)
+    monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
 
     def test_db():
         with session() as db:
@@ -125,3 +127,58 @@ def test_food_sync_normalizes_only_valid_gram_servings():
     modern = {"FOOD_CD": "B1", "FOOD_NM_KR": "기장밥", "SERVING_SIZE": "100g",
               "AMT_NUM1": "120", "AMT_NUM3": "2", "AMT_NUM6": "26", "AMT_NUM4": "0.5"}
     assert normalize(modern) == {"source_id": "B1", "name": "기장밥", "calories": 120, "protein": 2, "carbs": 26, "fat": 0.5}
+    assert normalize({**modern, "AMT_NUM1": "nan"}) is None
+
+
+def test_portal_api_page_uses_issued_key_and_checks_response(monkeypatch):
+    from rpa import sync_foods
+
+    class Response:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"header": {"resultCode": "00", "resultMsg": "NORMAL SERVICE."},
+                    "body": {"totalCount": 2, "items": [{"FOOD_CD": "A1"}]}}
+
+    def fake_get(url, params, timeout):
+        assert url == sync_foods.API_URL
+        assert params == {"serviceKey": "a+b/=", "pageNo": 1, "numOfRows": 500, "type": "json"}
+        assert timeout == 30
+        return Response()
+
+    monkeypatch.setattr(sync_foods.requests, "get", fake_get)
+    assert sync_foods.fetch_page("a%2Bb%2F%3D", 1) == ([{"FOOD_CD": "A1"}], 2)
+
+    class ErrorResponse(Response):
+        def json(self):
+            return {"header": {"resultCode": "20", "resultMsg": "SERVICE_KEY_IS_NULL"}}
+
+    monkeypatch.setattr(sync_foods.requests, "get", lambda *args, **kwargs: ErrorResponse())
+    with pytest.raises(RuntimeError, match="error code: 20"):
+        sync_foods.fetch_page("key", 1)
+
+
+def test_portal_sync_upserts_across_pages_without_duplicates(monkeypatch):
+    from rpa import sync_foods
+
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)
+    monkeypatch.setattr(sync_foods, "engine", engine)
+    monkeypatch.setattr(sync_foods, "SessionLocal", session)
+    monkeypatch.setattr(sync_foods, "PAGE_SIZE", 2)
+    monkeypatch.setenv("MFDS_API_KEY", "test-key")
+    monkeypatch.setenv("SYNC_MAX_PAGES", "2")
+
+    def row(code, energy):
+        return {"FOOD_CD": code, "FOOD_NM_KR": "현미밥", "SERVING_SIZE": "100g",
+                "AMT_NUM1": energy, "AMT_NUM3": "4", "AMT_NUM6": "25", "AMT_NUM4": "1"}
+
+    pages = {1: ([row("A1", "100"), row("B1", "200")], 3), 2: ([row("A1", "120")], 3)}
+    monkeypatch.setattr(sync_foods, "fetch_page", lambda key, page: pages[page])
+    assert sync_foods.sync() == 3
+    with session() as db:
+        assert db.query(Food).count() == 2
+        assert db.query(Food).filter_by(source_id="A1").one().calories == 120
+    engine.dispose()

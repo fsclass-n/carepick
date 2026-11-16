@@ -21,7 +21,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://carepick.netlify.app
+        value: https://carepick.onrender.com
       - key: BACKEND_URL
         value: https://carepick-api.onrender.com
       - key: DEMO_ACCOUNTS_ENABLED

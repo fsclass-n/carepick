@@ -19,6 +19,7 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           MFDS_API_KEY: ${{ secrets.MFDS_API_KEY }}
+          SYNC_MAX_PAGES: ${{ vars.SYNC_MAX_PAGES || '10' }}
         run: |
           if [ -z "$DATABASE_URL" ] || [ -z "$MFDS_API_KEY" ]; then
             echo "DATABASE_URL and MFDS_API_KEY must be configured in GitHub Actions secrets."
