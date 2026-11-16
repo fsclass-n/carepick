@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: carepick-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - backend/**
+        - rpa/**
+        - requirements.txt
+        - Dockerfile
+        - render.yaml
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://carepick.netlify.app
+      - key: BACKEND_URL
+        value: https://carepick.onrender.com
+      - key: DEMO_ACCOUNTS_ENABLED
+        value: "false"
