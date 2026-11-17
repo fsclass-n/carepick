@@ -56,25 +56,25 @@
 ## Architecture & Data Pipeline
 
 ```mermaid
-flowchart LR
-    subgraph Batch["배치 (GitHub Actions · 매주 월 11:30 KST + 수동)"]
-        S([cron / workflow_dispatch]) --> E[Extract<br/>포털 API 500건/페이지]
-        E --> V[Validate<br/>resultCode · 응답 구조 · 짧은 페이지]
-        V --> T[Transform<br/>1회 제공량 → 100g · g 단위만<br/>빈값 · NaN · 음수 제외]
-        T --> L[Load<br/>source_id 기준 페이지 단위 upsert]
+flowchart TB
+    subgraph Batch["① 배치 — GitHub Actions · 매주 월 11:30 KST + 수동 실행"]
+        direction LR
+        P[(공공데이터포털<br/>식품영양성분DB)] -- serviceKey --> E[Extract<br/>500건/페이지]
+        E --> V[Validate<br/>resultCode · 응답 구조]
+        V --> T[Transform<br/>100g 환산 · 빈값 제외]
+        T --> L[Load<br/>source_id upsert]
     end
-    P[(공공데이터포털<br/>식품영양성분DB)] -. serviceKey .-> E
-    L --> DB[(TiDB Cloud<br/>TLS · 인증서 검증)]
-
-    subgraph Service["서비스 (Render · Docker · FastAPI)"]
-        API[FastAPI<br/>JWT · RBAC · CORS 허용 목록]
-        N[영양 목표 계산<br/>Mifflin-St Jeor × 활동계수]
+    L --> DB[(② TiDB Cloud<br/>TLS · 인증서 검증)]
+    subgraph Service["③ 서비스 — Render · Docker"]
+        direction LR
+        API[FastAPI<br/>JWT · RBAC · CORS] --> N[영양 목표 계산<br/>Mifflin-St Jeor]
     end
     DB <--> API
-    API --> N
-    FE1[React SPA · Netlify] -->|HTTPS · VITE_API_URL| API
-    FE2[React SPA · Render Static] -->|HTTPS| API
-    U((사용자)) --> FE1 & FE2
+    subgraph Client["④ 화면 — React SPA"]
+        direction LR
+        FE1[Netlify] ~~~ FE2[Render Static]
+    end
+    Client -- HTTPS · VITE_API_URL --> API
 ```
 
 **흐름 요약**
@@ -90,12 +90,10 @@ flowchart LR
 
 ### 1. 공공데이터 수집 — 크롤링 대신 공식 API, 그리고 API 이관 대응
 
-| | 내용 |
-| --- | --- |
-| **결정** | 공식 API가 있는 출처는 브라우저 자동화(Playwright 등)로 화면을 긁지 않습니다. 사이트 개편에 깨지지 않고, 이용 약관 문제도 없으며, 브라우저 없이 가볍게 실행됩니다. |
-| **문제** | 식품안전나라 서비스(`I2790`)가 공공데이터포털로 이관되며 **인증 방식**(URL 경로 → `serviceKey` 쿼리), **응답 구조**(`I2790.row` → `body.items`), **페이지 한도**가 한꺼번에 바뀌었습니다. |
-| **해결** | 추측으로 고치지 않고 실제 응답부터 확인했습니다. 한도는 문서 대신 **실측**으로 확정했습니다(1,000건 요청 → 오류 코드 11, 500건 정상). 포털이 주는 인코딩된 키가 두 번 인코딩되지 않도록 `unquote` 후 전달합니다. |
-| **안정성** | `resultCode != "00"`, 응답 구조 불일치, 마지막 페이지 전의 짧은 페이지, 적재 가능한 행 0건을 모두 **실패로 처리**해 조용히 빈 데이터가 쌓이지 않게 했습니다. 예외 메시지에 API 키가 섞이지 않도록 실패 로그에는 원인만 남깁니다. |
+- **결정** — 공식 API가 있는 출처는 브라우저 자동화(Playwright 등)로 화면을 긁지 않습니다. 사이트 개편에 깨지지 않고, 이용 약관 문제도 없으며, 브라우저 없이 가볍게 실행됩니다.
+- **문제** — 식품안전나라 서비스(`I2790`)가 공공데이터포털로 이관되며 **인증 방식**(URL 경로 → `serviceKey` 쿼리), **응답 구조**(`I2790.row` → `body.items`), **페이지 한도**가 한꺼번에 바뀌었습니다.
+- **해결** — 추측으로 고치지 않고 실제 응답부터 확인했습니다. 한도는 문서 대신 **실측**으로 확정했습니다(1,000건 요청 → 오류 코드 11, 500건 정상). 포털이 주는 인코딩된 키가 두 번 인코딩되지 않도록 `unquote` 후 전달합니다.
+- **안정성** — `resultCode != "00"`, 응답 구조 불일치, 마지막 페이지 전의 짧은 페이지, 적재 가능한 행 0건을 모두 **실패로 처리**해 조용히 빈 데이터가 쌓이지 않게 했습니다. 예외 메시지에 API 키가 섞이지 않도록 실패 로그에는 원인만 남깁니다.
 
 ### 2. 주기 동기화 · 중복 처리 · 정제 전략
 
