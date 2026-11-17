@@ -105,7 +105,7 @@ function App() {
         <Route path="/dashboard" element={user ? <Dashboard token={token} user={user} /> : <Login onLogin={signedIn} />} />
         <Route path="/journal" element={user ? <Journal token={token} /> : <Login onLogin={signedIn} />} />
         <Route path="/insights" element={user ? <Insights token={token} /> : <Login onLogin={signedIn} />} />
-        <Route path="/admin" element={user?.role === 'admin' ? <Admin token={token} user={user} /> : user ? <Dashboard token={token} user={user} /> : <Login onLogin={signedIn} />} />
+        <Route path="/admin" element={user?.role === 'admin' ? <Admin token={token} user={user} /> : user ? <AdminOnly /> : <Login onLogin={signedIn} />} />
         <Route path="*" element={<Home />} />
       </Routes>
     </main>
@@ -270,6 +270,15 @@ function Dashboard({ token, user }) {
     <p className="medical-note"><Icon icon={faCircleExclamation} /> {recommendation.personalized ? '목표치는 입력한 신체 정보와 활동량으로 추정한 참고값입니다.' : '표시된 목표치는 일반 성인 예시입니다.'} 의료·영양 상담을 대신하지 않습니다.</p>
   </div></div>
 }
+function AdminOnly() {
+  return <div className="app-page"><div className="container"><div className="panel admin-only" role="alert">
+    <span className="admin-only-icon"><Icon icon={faLock} /></span>
+    <span className="eyebrow">ADMIN ONLY</span>
+    <h1>관리자 전용 화면입니다.</h1>
+    <p>회원 관리는 관리자 권한이 있는 계정만 이용할 수 있습니다. 서버도 모든 관리자 요청의 권한을 다시 확인합니다.</p>
+    <Link to="/dashboard" className="button button-dark">대시보드로 돌아가기 <Icon icon={faArrowRight} /></Link>
+  </div></div></div>
+}
 function EmptyState({ text }) { return <div className="empty-state"><Icon icon={faCalendarDays} /><p>{text}</p></div> }
 function Journal({ token }) {
   const { meals, error, setError, loading, refresh } = useMeals(token)
@@ -368,7 +377,7 @@ function Admin({ token, user }) {
   return <div className="app-page"><div className="container"><PageHeading tag="ADMIN CONSOLE" title="회원 관리" description="회원 목록을 확인하고 서비스 권한을 안전하게 관리하세요." icon={faUsers} />
     <div className="admin-summary"><Icon icon={faShieldHeart} /><div><strong>{user.is_demo ? '테스트 관리자 체험 모드' : '관리자 전용 공간'}</strong><p>{user.is_demo ? '실제 회원 정보는 가려서 표시되며, 권한은 테스트 계정끼리만 변경할 수 있습니다.' : '회원 권한 변경은 즉시 적용됩니다. 본인 권한은 변경할 수 없습니다.'}</p></div><span>전체 회원 {users.length}명</span></div>
     {error && <div className="form-error" role="alert">{error}</div>}
-    <div className="panel admin-panel"><div className="panel-heading"><div><span className="eyebrow">MEMBERS</span><h3>회원 목록</h3></div></div><div className="table-scroll"><table><thead><tr><th>회원</th><th>이메일</th><th>가입 방식</th><th>권한</th></tr></thead><tbody>{users.map((item) => <tr key={item.id}><td><div className="table-person"><span><Icon icon={faUser} /></span><strong>{item.name}{item.id === user.id ? ' (나)' : ''}</strong></div></td><td>{item.email}</td><td>{item.provider || '이메일'}</td><td><select aria-label={`${item.name} 권한`} disabled={item.id === user.id || busyId === item.id || (user.is_demo && !item.is_demo)} value={item.role} onChange={(e) => changeRole(item.id, e.target.value)}><option value="user">일반 사용자</option><option value="admin">관리자</option></select></td></tr>)}</tbody></table></div>{!users.length && <EmptyState text="표시할 회원이 없습니다." />}</div>
+    <div className="panel admin-panel"><div className="panel-heading"><div><span className="eyebrow">MEMBERS</span><h3>회원 목록</h3></div></div><div className="table-scroll"><table><thead><tr><th>회원</th><th>이메일</th><th>가입 방식</th><th>권한</th></tr></thead><tbody>{users.map((item) => <tr key={item.id}><td><div className="table-person"><span><Icon icon={faUser} /></span><strong>{item.name}{item.id === user.id ? ' (나)' : ''}</strong></div></td><td>{item.email}</td><td>{item.provider || '이메일'}</td><td><select aria-label={`${item.name} 권한`} disabled={item.id === user.id || busyId === item.id} value={item.role} onChange={(e) => changeRole(item.id, e.target.value)}><option value="user">일반 사용자</option><option value="admin">관리자</option></select></td></tr>)}</tbody></table></div>{!users.length && <EmptyState text="표시할 회원이 없습니다." />}</div>
   </div></div>
 }
 
