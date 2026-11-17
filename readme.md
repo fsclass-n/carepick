@@ -2,6 +2,24 @@
 
 식단 기록과 공공데이터 기반 영양 정보를 함께 보여주는 헬스케어 MVP입니다. 신체 정보와 활동량을 입력하지 않은 경우 **일반 성인 예시**를 표시하고, 입력 시 추정 에너지 소모량에 따른 목표를 계산합니다. 의료적 권고 또는 진단이 아닙니다.
 
+## 발표·시연 영상 (10분)
+
+[![carepick 10분 발표·시연 영상](docs/video/video-thumbnail.png)](docs/video/carepick_final.mp4)
+
+- 본편: [`docs/video/carepick_final.mp4`](docs/video/carepick_final.mp4) (10:00 · 1080p · 자막 [`carepick_final.srt`](docs/video/carepick_final.srt))
+- 60초 하이라이트(테스트 관리자 권한 변경 → 서버 거부 → 모바일 메뉴 비교): [`docs/video/carepick_highlight.mp4`](docs/video/carepick_highlight.mp4)
+- 시연은 운영 사이트 `carepick.onrender.com`의 **공용 테스트 계정 2개(일반 사용자 / 관리자)**를 비교합니다. 내레이션은 AI 합성 음성입니다.
+- 장면별 대본·연출: [`docs/video/영상_대본_및_연출가이드.md`](docs/video/영상_대본_및_연출가이드.md)
+
+| 시간 | 내용 |
+| --- | --- |
+| 00:00 | PPT 발표 — 문제 정의 · 아키텍처 · 기술 선택 · 수집 파이프라인 · 영양 계산 · 보안 · 트러블슈팅 |
+| 03:00 | 일반 사용자 — 로그인 · 비밀번호 정책 · 식단 기록(공공데이터 검색) · 리포트 · 모바일 · `/admin` 차단 |
+| 06:15 | 관리자 — 회원 관리(마스킹) · 테스트 계정 권한 변경 · 실제 회원 변경 서버 거부 · 역할 비교 · API 문서 · GitHub Actions |
+| 09:00 | 클로징 — 회고 · 마무리 |
+
+> GitHub에서 README 안에 바로 재생하려면 하이라이트 MP4(10MB 이하)를 웹 편집기에 드래그해 생성되는 `user-attachments` 주소를 여기에 붙이세요.
+
 ## 구성
 
 - `frontend/`: Vite + React + Tailwind CSS v4, 반응형 홈/로그인/식단/리포트/회원 관리

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;width:1920px;height:1080px;background:#f8f9f5;font-family:"Noto Sans KR",sans-serif;color:#233a32;overflow:hidden}
+  .wrap{display:grid;grid-template-columns:320px 320px 1fr;gap:60px;align-items:center;padding:150px 120px 0}
+  h1{position:absolute;left:120px;top:54px;margin:0;font-size:40px;font-weight:700;letter-spacing:-1px}
+  .eyebrow{position:absolute;left:122px;top:30px;font-size:15px;font-weight:700;letter-spacing:3px;color:#5e8f68}
+  .phone{border-radius:34px;border:10px solid #213e33;overflow:hidden;background:#fff;box-shadow:0 18px 50px rgba(30,60,45,.22)}
+  .phone img{display:block;width:100%}
+  .cap{margin-top:18px;text-align:center;font-size:21px;font-weight:700}
+  .cap small{display:block;font-size:15px;font-weight:500;color:#6f8273;margin-top:4px}
+  table{border-collapse:separate;border-spacing:0;width:100%;margin-top:6px;font-size:23px;background:#fff;border:1px solid #dde5da;border-radius:16px;overflow:hidden}
+  th{background:#213e33;color:#fff;text-align:left;padding:18px 20px;font-size:19px}
+  td{padding:22px 22px;border-top:1px solid #e8ede6}
+  td:first-child{font-weight:700;color:#213e33}
+  .no{color:#b75243;font-weight:700}
+  .yes{color:#3f7455;font-weight:700}
+  .note{margin-top:26px;font-size:19px;line-height:1.7;color:#6f8273}
+</style>
+</head>
+<body>
+  <div class="eyebrow">ROLE COMPARISON</div>
+  <h1>같은 로그인, 역할에 따라 다른 화면과 권한</h1>
+  <div class="wrap">
+    <div data-hl="user"><div class="phone"><img src="{{USER}}" alt=""></div><div class="cap">일반 사용자<small>메뉴 3개</small></div></div>
+    <div data-hl="admin"><div class="phone"><img src="{{ADMIN}}" alt=""></div><div class="cap">테스트 관리자<small>메뉴 4개 · 회원 관리 추가</small></div></div>
+    <div>
+      <table data-hl="table">
+        <tr><th>할 수 있는 일</th><th>일반 사용자</th><th>테스트 관리자</th><th>실제 관리자</th></tr>
+        <tr data-hl="row-own"><td>본인 식단·리포트</td><td class="yes">가능</td><td class="yes">가능</td><td class="yes">가능</td></tr>
+        <tr data-hl="row-menu"><td>회원 관리 메뉴</td><td class="no">없음 · /admin 차단</td><td class="yes">있음</td><td class="yes">있음</td></tr>
+        <tr data-hl="row-list"><td>회원 목록</td><td class="no">403</td><td>가려서 보기</td><td class="yes">전체 보기</td></tr>
+        <tr data-hl="row-demo"><td>테스트 계정 권한 변경</td><td class="no">403</td><td class="yes">가능</td><td class="yes">가능</td></tr>
+        <tr data-hl="row-real"><td>실제 회원 권한 변경</td><td class="no">403</td><td class="no">403 거부</td><td class="yes">가능</td></tr>
+      </table>
+      <p class="note">모든 권한은 서버가 요청마다 다시 확인합니다.<br>화면의 메뉴 숨김은 보조 수단일 뿐입니다.</p>
+    </div>
+  </div>
+</body>
+</html>
