@@ -1,80 +1,27 @@
 # carepick
 
-식단 기록과 공공데이터 기반 영양 정보를 함께 보여주는 헬스케어 MVP입니다. 신체 정보와 활동량을 입력하지 않은 경우 **일반 성인 예시**를 표시하고, 입력 시 추정 에너지 소모량에 따른 목표를 계산합니다. 의료적 권고 또는 진단이 아닙니다.
+> 식단 기록과 공공데이터로 나에게 맞는 영양 목표를 보여 주는 헬스케어 웹 서비스 — 1인 풀스택 개발 **이오리**
 
-## 발표·시연 영상 (10분)
+## 포트폴리오 사이트 바로가기
 
-[![carepick 10분 발표·시연 영상](docs/video/video-thumbnail.png)](docs/video/carepick_final.mp4)
+### [https://fsclass-n.github.io/carepick/](https://fsclass-n.github.io/carepick/)
 
-- 본편: [`docs/video/carepick_final.mp4`](docs/video/carepick_final.mp4) (10:00 · 1080p · 자막 [`carepick_final.srt`](docs/video/carepick_final.srt))
-- 60초 하이라이트(테스트 관리자 권한 변경 → 서버 거부 → 모바일 메뉴 비교): [`docs/video/carepick_highlight.mp4`](docs/video/carepick_highlight.mp4)
-- 시연은 운영 사이트 `carepick.onrender.com`의 **공용 테스트 계정 2개(일반 사용자 / 관리자)**를 비교합니다. 내레이션은 AI 합성 음성입니다.
-- 장면별 대본·연출: [`docs/video/영상_대본_및_연출가이드.md`](docs/video/영상_대본_및_연출가이드.md)
+[![carepick 포트폴리오](docs/site/poster-full.jpg)](https://fsclass-n.github.io/carepick/)
 
-| 시간 | 내용 |
-| --- | --- |
-| 00:00 | PPT 발표 — 문제 정의 · 아키텍처 · 기술 선택 · 수집 파이프라인 · 영양 계산 · 보안 · 트러블슈팅 |
-| 03:00 | 일반 사용자 — 로그인 · 비밀번호 정책 · 식단 기록(공공데이터 검색) · 리포트 · 모바일 · `/admin` 차단 |
-| 06:15 | 관리자 — 회원 관리(마스킹) · 테스트 계정 권한 변경 · 실제 회원 변경 서버 거부 · 역할 비교 · API 문서 · GitHub Actions |
-| 09:00 | 클로징 — 회고 · 마무리 |
+10분 발표·시연 영상과 3분 하이라이트를 썸네일 자리에서 바로 재생할 수 있습니다. 영양 목표 계산기와 일반/관리자 권한 비교도 직접 체험할 수 있습니다.
 
-> GitHub에서 README 안에 바로 재생하려면 하이라이트 MP4(10MB 이하)를 웹 편집기에 드래그해 생성되는 `user-attachments` 주소를 여기에 붙이세요.
+## 작품 안내
 
-## 구성
+| 구분 | 내용 | 바로가기 |
+| --- | --- | --- |
+| 온라인 발표 · 10분 시연 | PPT 발표 → 운영 사이트에서 일반 사용자·관리자 테스트 계정 비교 → 회고 | [사이트에서 보기](https://fsclass-n.github.io/carepick/#theater) · [MP4](docs/video/carepick_final.mp4) |
+| 3분 하이라이트 | 두 테스트 계정의 차이(권한 변경 · 서버 거부 · 역할 비교)만 요약 | [MP4](docs/video/carepick_highlight_3min.mp4) |
+| 라이브 서비스 | 로그인 화면의 **일반 사용자 / 관리자** 테스트 계정 버튼으로 바로 체험 | [carepick.onrender.com](https://carepick.onrender.com) |
+| API 문서 | FastAPI Swagger | [carepick-api.onrender.com/docs](https://carepick-api.onrender.com/docs) |
+| 발표 자료 | 16장 PDF · PPTX | [PDF](docs/pdf/프로젝트_발표자료.pdf) · [PPTX](docs/프로젝트_발표자료.pptx) |
 
-- `frontend/`: Vite + React + Tailwind CSS v4, 반응형 홈/로그인/식단/리포트/회원 관리
-- `backend/`: FastAPI, Argon2 비밀번호, JWT 인증, OAuth, 식단/회원 관리 API
-- `rpa/`: 공공데이터포털의 식품의약품안전처 식품영양성분DB정보 API를 TiDB로 동기화
-- `docs/`: 설계, 진행 기록 및 기존 HWPX 원본(원본 수정 없이 보존)
+**기술 스택** React 19 · Vite · Tailwind v4 / FastAPI · SQLAlchemy 2 · Argon2 · JWT / TiDB Cloud / Render(Docker) · Netlify · GitHub Actions / 공공데이터포털 식품영양성분DB API
 
-## 로컬 실행
+**문서** [실행 및 배포 가이드](docs/산출물/실행_및_배포_가이드.md) · [서비스 설계서](docs/산출물/서비스_설계서.md) · [개발 기록](docs/md/2026-11-16_개발기록.md) · [영상 대본·연출 가이드](docs/video/영상_대본_및_연출가이드.md)
 
-Python 3.11 및 Node.js 24 이상을 사용합니다.
-
-```bash
-python -m venv .venv
-# Windows Git Bash: .venv/Scripts/python / macOS, Linux: .venv/bin/python
-.venv/Scripts/python -m pip install -r requirements.txt
-cp .env.example .env
-```
-
-`.env`의 `DATABASE_URL`을 로컬에서도 TiDB 클러스터 접속 주소로 설정하세요. DB URL에 특수문자가 있는 비밀번호는 percent-encode 해야 합니다. TiDB가 준비되지 않은 개발 환경에서는 `DATABASE_URL=sqlite:///./carepick-dev.db`를 설정하여 UI/API만 확인할 수 있습니다. `.env`가 전혀 없다면 개발 환경에서만 동일한 SQLite 임시 DB를 사용하며, **운영 환경에서는 DATABASE_URL과 JWT_SECRET이 반드시 필요**합니다.
-
-```bash
-.venv/Scripts/python -m uvicorn backend.main:app --reload
-cd frontend
-npm ci
-npm run dev
-```
-
-프런트엔드: http://localhost:5173, API 문서: http://localhost:8000/docs. Vite 개발 프록시가 `/api` 요청을 로컬 백엔드로 전달합니다. `DEMO_ACCOUNTS_ENABLED=true`이면 로그인 화면에 일반 사용자/관리자 테스트 계정 버튼이 표시됩니다(운영 환경 포함, 기본값은 꺼짐). 테스트 계정은 누구나 함께 쓰는 공용 계정입니다. 테스트 관리자는 회원 관리 화면을 체험할 수 있지만 실제 회원의 이름·이메일은 가려서 보고, 권한은 테스트 계정끼리만 바꿀 수 있습니다. 실제 회원 관리는 `ADMIN_EMAIL`로 만든 관리자 계정으로 합니다.
-
-식품 데이터를 수집하려면 공공데이터포털의 **식품의약품안전처_식품영양성분DB정보** 활용신청 후 발급된 키를 `.env`의 `MFDS_API_KEY`에 넣고 저장소 루트에서 다음을 실행합니다. 현재 수집기는 `FoodNtrCpntDbInfo03/getFoodNtrCpntDbInq03`을 사용합니다. 식품안전나라의 예전 `I2790` 호출 주소에 새 키를 넣어도 동작하지 않습니다.
-
-```bash
-.venv/Scripts/python -m rpa.sync_foods
-```
-
-AWS S3는 사용하지 않습니다. 동기화 결과는 TiDB에 저장됩니다.
-
-포털 API는 한 번에 최대 500행을 반환합니다. `SYNC_MAX_PAGES=10` 기본값은 처음 5,000행까지만 처리하며, 전체 데이터 수에 맞춰 이 값을 늘려야 전체 동기화가 됩니다. GitHub Actions에서는 저장소 변수 `SYNC_MAX_PAGES`로 지정할 수 있습니다. 전체 동기화 전에 TiDB 용량, API 호출량 및 실행 시간을 확인하세요.
-
-## 배포
-
-- Netlify: 저장소 루트의 `netlify.toml`을 인식하도록 Git 저장소를 연결합니다. 공개 빌드 변수 `VITE_API_URL=https://carepick-api.onrender.com`이 기본으로 설정되며 대시보드에 다른 값이 있다면 같은 주소로 맞춰야 합니다. `frontend/`나 `netlify.toml` 변경에만 재빌드합니다.
-- Render: `render.yaml` Blueprint 또는 Docker Web Service를 사용합니다. 서비스 이름은 `carepick-api`이며 `BACKEND_URL`은 실제 Render 서비스 주소와 일치해야 합니다. `DATABASE_URL`과 OAuth/관리자 환경 변수는 Render 대시보드에 등록합니다. `ADMIN_EMAIL`/`ADMIN_PASSWORD`는 선택 항목이며, 비밀번호가 규칙(영문 대·소문자, 숫자, 특수문자 포함 8자 이상)에 맞지 않으면 서버는 정상 시작하되 초기 관리자 생성만 건너뛰고 경고 로그를 남깁니다. 백엔드 관련 파일 변경 시에만 자동 빌드합니다.
-- TiDB: `mysql+pymysql://...` 형식으로 접속하고 서버 인증서 검증을 적용합니다. 비공개 CA를 사용하는 경우 컨테이너에 파일을 제공한 뒤 `TIDB_CA_PATH`를 지정합니다.
-- OAuth: 제공자 콘솔에 `https://carepick-api.onrender.com/api/auth/oauth/{google|naver|kakao}/callback`을 각각 등록하고 ID/Secret을 Render에 넣습니다. 설정하지 않은 제공자는 503을 반환합니다. 기존 이메일 계정과 소셜 계정은 자동 연결하지 않습니다.
-- 공공데이터 동기화: `.github/workflows/sync-foods.yml`은 매주 실행합니다. GitHub Actions secrets `DATABASE_URL`, `MFDS_API_KEY`가 필요하며 `SYNC_MAX_PAGES`는 선택적인 저장소 변수입니다.
-- `.env.example` 하단에 Render/Netlify/Actions별 등록 변수를 구분해 두었습니다. `.env` 자체는 절대 커밋하지 않습니다.
-
-예정 배포 주소: [GitHub](https://github.com/fsclass-n/carepick) · [안내 페이지](https://fsclass-n.github.io/carepick/) · [프런트엔드](https://carepick.netlify.app) · [API](https://carepick-api.onrender.com/api/health). 현재 배포 상태는 각각의 대시보드에서 별도로 확인해야 합니다.
-
-## 검증
-
-```bash
-.venv/Scripts/python -m pytest -q
-cd frontend && npm run build
-```
-
-기능/데이터 흐름 및 향후 개인화 목표 산정 계획은 `docs/산출물/서비스_설계서.md`에 정리했습니다.
+> 영상 내레이션은 AI 합성 음성입니다. 영양 목표는 추정치이며 의료 진단을 대신하지 않습니다.
